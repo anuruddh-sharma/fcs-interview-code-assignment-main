@@ -4,7 +4,9 @@ import java.time.LocalDateTime;
 
 public class Warehouse {
 
-  // unique identifier
+  public Long id;
+
+  // unique identifier of the active warehouse; reused when a warehouse is replaced
   public String businessUnitCode;
 
   public String location;

@@ -24,11 +24,31 @@ Make sure that `JAVA_HOME` environment variables has been set, and that a JDK 17
 
 ## Building the demo
 
-Execute the Maven build on the root of the project:
+Execute the Maven build on the root of this module:
 
 ```sh
 ./mvnw package
 ```
+
+On Windows, use `mvnw.cmd` instead of `./mvnw`.
+
+## Tests and coverage
+
+`./mvnw clean verify` starts an embedded PostgreSQL, so Docker is not required to run the tests. JaCoCo fails the build when line coverage drops below 80%. The report is `target/jacoco-report/index.html`. GitHub Actions runs this command from `.github/workflows/ci.yml`.
+
+`./mvnw quarkus:dev` uses Quarkus Dev Services and needs Docker, unless you point the datasource at your own PostgreSQL.
+
+## Fulfilment API
+
+`POST /fulfilment` associates a product with a warehouse for a store:
+
+```json
+{ "storeId": 1, "productId": 2, "warehouseId": 3 }
+```
+
+`GET /fulfilment` lists associations. `GET /fulfilment?storeId=1` filters by store. `DELETE /fulfilment/{id}` removes one.
+
+Rules: at most 2 warehouses per product per store, at most 3 warehouses per store, and at most 5 product types per warehouse. The warehouse must be active.
 
 ## Running the demo
 

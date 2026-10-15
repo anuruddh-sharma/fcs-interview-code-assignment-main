@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Status;
+import jakarta.transaction.Synchronization;
+import jakarta.transaction.TransactionSynchronizationRegistry;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -28,6 +31,8 @@ import org.jboss.logging.Logger;
 public class StoreResource {
 
   @Inject LegacyStoreManagerGateway legacyStoreManagerGateway;
+
+  @Inject TransactionSynchronizationRegistry transactionSynchronizationRegistry;
 
   private static final Logger LOGGER = Logger.getLogger(StoreResource.class.getName());
 
@@ -53,9 +58,9 @@ public class StoreResource {
       throw new WebApplicationException("Id was invalidly set on request.", 422);
     }
 
-    store.persist();
+    store.persistAndFlush();
 
-    legacyStoreManagerGateway.createStoreOnLegacySystem(store);
+    afterCommit(() -> legacyStoreManagerGateway.createStoreOnLegacySystem(store));
 
     return Response.ok(store).status(201).build();
   }
@@ -77,7 +82,7 @@ public class StoreResource {
     entity.name = updatedStore.name;
     entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
 
-    legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
+    afterCommit(() -> legacyStoreManagerGateway.updateStoreOnLegacySystem(entity));
 
     return entity;
   }
@@ -104,7 +109,7 @@ public class StoreResource {
       entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
     }
 
-    legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
+    afterCommit(() -> legacyStoreManagerGateway.updateStoreOnLegacySystem(entity));
 
     return entity;
   }
@@ -119,6 +124,21 @@ public class StoreResource {
     }
     entity.delete();
     return Response.status(204).build();
+  }
+
+  private void afterCommit(Runnable action) {
+    transactionSynchronizationRegistry.registerInterposedSynchronization(
+        new Synchronization() {
+          @Override
+          public void beforeCompletion() {}
+
+          @Override
+          public void afterCompletion(int status) {
+            if (status == Status.STATUS_COMMITTED) {
+              action.run();
+            }
+          }
+        });
   }
 
   @Provider

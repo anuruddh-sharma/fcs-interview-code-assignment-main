@@ -2,11 +2,16 @@ package com.fulfilment.application.monolith.warehouses.adapters.restapi;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
 
+import com.fulfilment.application.monolith.support.EmbeddedPostgresTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusIntegrationTest;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 @QuarkusIntegrationTest
+@WithTestResource(EmbeddedPostgresTestResource.class)
 public class WarehouseEndpointIT {
 
   @Test
@@ -24,38 +29,29 @@ public class WarehouseEndpointIT {
   }
 
   @Test
-  public void testSimpleCheckingArchivingWarehouses() {
+  public void testCreateAndArchiveWarehouse() {
+    final String path = "warehouse";
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                "{\"businessUnitCode\":\"MWH-IT-1\",\"location\":\"HELMOND-001\",\"capacity\":20,\"stock\":4}")
+            .when()
+            .post(path)
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
 
-    // Uncomment the following lines to test the WarehouseResourceImpl implementation
+    given().when().get(path + "/" + id).then().statusCode(200).body(containsString("MWH-IT-1"));
 
-    // final String path = "warehouse";
+    given().when().delete(path + "/" + id).then().statusCode(204);
 
-    // List all, should have all 3 products the database has initially:
-    // given()
-    //     .when()
-    //     .get(path)
-    //     .then()
-    //     .statusCode(200)
-    //     .body(
-    //         containsString("MWH.001"),
-    //         containsString("MWH.012"),
-    //         containsString("MWH.023"),
-    //         containsString("ZWOLLE-001"),
-    //         containsString("AMSTERDAM-001"),
-    //         containsString("TILBURG-001"));
-
-    // // Archive the ZWOLLE-001:
-    // given().when().delete(path + "/1").then().statusCode(204);
-
-    // // List all, ZWOLLE-001 should be missing now:
-    // given()
-    //     .when()
-    //     .get(path)
-    //     .then()
-    //     .statusCode(200)
-    //     .body(
-    //         not(containsString("ZWOLLE-001")),
-    //         containsString("AMSTERDAM-001"),
-    //         containsString("TILBURG-001"));
+    given()
+        .when()
+        .get(path)
+        .then()
+        .statusCode(200)
+        .body(not(containsString("MWH-IT-1")), containsString("MWH.001"), containsString("AMSTERDAM-001"));
   }
 }

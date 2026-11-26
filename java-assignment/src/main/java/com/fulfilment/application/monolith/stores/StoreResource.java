@@ -91,8 +91,9 @@ public class StoreResource {
   @Path("{id}")
   @Transactional
   public Store patch(Long id, Store updatedStore) {
-    if (updatedStore.name == null) {
-      throw new WebApplicationException("Store Name was not set on request.", 422);
+    if (updatedStore == null
+        || (updatedStore.name == null && updatedStore.quantityProductsInStock == null)) {
+      throw new WebApplicationException("At least one store field must be provided.", 422);
     }
 
     Store entity = Store.findById(id);
@@ -101,11 +102,12 @@ public class StoreResource {
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
 
-    if (entity.name != null) {
+    // PATCH updates only fields present in the request. In particular, zero is a
+    // valid stock quantity and must not be confused with an omitted field.
+    if (updatedStore.name != null) {
       entity.name = updatedStore.name;
     }
-
-    if (entity.quantityProductsInStock != 0) {
+    if (updatedStore.quantityProductsInStock != null) {
       entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
     }
 

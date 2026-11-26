@@ -151,4 +151,69 @@ public class StoreEndpointTest {
 
     verify(legacyStoreManagerGateway, never()).createStoreOnLegacySystem(any());
   }
+  @Test
+  public void patchUpdatesOnlyFieldsProvidedAndAllowsZeroStock() {
+    String name = "PATCH" + UUID.randomUUID().toString().substring(0, 8);
+    Number id =
+        given()
+            .contentType(ContentType.JSON)
+            .body("{\\"name\\":\\"" + name + "\\",\\"quantityProductsInStock\\":7}")
+            .when()
+            .post("/store")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
+
+    // A stock-only patch must preserve the name; zero is a valid explicit value.
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\\"quantityProductsInStock\\":0}")
+        .when()
+        .patch("/store/" + id.longValue())
+        .then()
+        .statusCode(200)
+        .body(containsString(name));
+
+    given()
+        .when()
+        .get("/store/" + id.longValue())
+        .then()
+        .statusCode(200)
+        .body(containsString(name))
+        .body(org.hamcrest.Matchers.containsString("\\"quantityProductsInStock\\":0"));
+
+    String renamed = name + "X";
+    // A name-only patch must preserve the existing stock quantity.
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\\"name\\":\\"" + renamed + "\\"}")
+        .when()
+        .patch("/store/" + id.longValue())
+        .then()
+        .statusCode(200)
+        .body(containsString(renamed));
+
+    given()
+        .when()
+        .get("/store/" + id.longValue())
+        .then()
+        .statusCode(200)
+        .body(containsString(renamed))
+        .body(org.hamcrest.Matchers.containsString("\\"quantityProductsInStock\\":0"));
+  }
+
+  @Test
+  public void patchRejectsEmptyBody() {
+    given()
+        .contentType(ContentType.JSON)
+        .body("{}")
+        .when()
+        .patch("/store/1")
+        .then()
+        .statusCode(422);
+
+    verify(legacyStoreManagerGateway, never()).updateStoreOnLegacySystem(any());
+  }
+
 }

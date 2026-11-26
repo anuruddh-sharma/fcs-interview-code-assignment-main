@@ -157,7 +157,7 @@ public class StoreEndpointTest {
     Number id =
         given()
             .contentType(ContentType.JSON)
-            .body("{\\"name\\":\\"" + name + "\\",\\"quantityProductsInStock\\":7}")
+            .body("{\"name\":\"" + name + "\",\"quantityProductsInStock\":7}")
             .when()
             .post("/store")
             .then()
@@ -168,7 +168,7 @@ public class StoreEndpointTest {
     // A stock-only patch must preserve the name; zero is a valid explicit value.
     given()
         .contentType(ContentType.JSON)
-        .body("{\\"quantityProductsInStock\\":0}")
+        .body("{\"quantityProductsInStock\":0}")
         .when()
         .patch("/store/" + id.longValue())
         .then()
@@ -181,13 +181,13 @@ public class StoreEndpointTest {
         .then()
         .statusCode(200)
         .body(containsString(name))
-        .body(org.hamcrest.Matchers.containsString("\\"quantityProductsInStock\\":0"));
+        .body(org.hamcrest.Matchers.containsString("\"quantityProductsInStock\":0"));
 
     String renamed = name + "X";
     // A name-only patch must preserve the existing stock quantity.
     given()
         .contentType(ContentType.JSON)
-        .body("{\\"name\\":\\"" + renamed + "\\"}")
+        .body("{\"name\":\"" + renamed + "\"}")
         .when()
         .patch("/store/" + id.longValue())
         .then()
@@ -200,7 +200,7 @@ public class StoreEndpointTest {
         .then()
         .statusCode(200)
         .body(containsString(renamed))
-        .body(org.hamcrest.Matchers.containsString("\\"quantityProductsInStock\\":0"));
+        .body(org.hamcrest.Matchers.containsString("\"quantityProductsInStock\":0"));
   }
 
   @Test
